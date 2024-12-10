@@ -51,9 +51,12 @@ func (dm diskMap) checksum() int {
 }
 
 func (dm diskMap) fullyDefragged() bool {
-	for e := dm.first; e.next != nil; e = e.next {
+	for e := dm.first; ; e = e.next {
 		if e.emptyBlocks > 0 && e.next != nil {
 			return false
+		}
+		if e.next == nil {
+			break
 		}
 	}
 	return true
@@ -64,14 +67,19 @@ func (dm diskMap) defragOnce() bool {
 		return true
 	}
 	var first, last, prevLast *diskMapEntry
+	// Find the last entry, and the one previous to it
 	for last = dm.first; last.next != nil; last = last.next {
 		prevLast = last
 	}
+	// Find the first entry with empty blocks to fill
 	for first = dm.first; first.emptyBlocks == 0; first = first.next {
 	}
-	// log.Printf("first:%v last:%v", first, last)
+	//log.Printf("first:%v prevLast:%v last:%v", first, prevLast, last)
 
-	if first.next.fileID != last.fileID || first.emptyBlocks > 0 {
+	// Otherwise prepare to move a file block from the last entry to
+	// either 'first' (with empty, if the file ID matches), or to insert
+	// a block (if the file ID doesn't match).
+	if first.next.fileID != last.fileID {
 		// insert new entry
 		existingNext := first.next
 		first.next = &diskMapEntry{
@@ -82,6 +90,13 @@ func (dm diskMap) defragOnce() bool {
 		}
 		first.emptyBlocks = 0
 	}
+	// When we reach the end, we need to shuffle the prevLast's empty blocks
+	// over to last's empties.
+	if first == prevLast {
+		last.emptyBlocks += prevLast.emptyBlocks
+		prevLast.emptyBlocks = 0
+	}
+
 	first.next.fileBlocks++
 	first.next.emptyBlocks--
 	last.fileBlocks--
@@ -90,15 +105,41 @@ func (dm diskMap) defragOnce() bool {
 		prevLast.next = nil
 		prevLast.emptyBlocks += last.emptyBlocks
 	}
-	/*
-		if last.fileID == prevLast.fileID {
-			// Coalesce the last two blocks.  todo; Probably need to do this throughout
-			prevLast.fileBlocks += last.fileBlocks
-			prevLast.emptyBlocks += last.emptyBlocks
-			prevLast.next = nil
-		}
-	*/
+
 	return false
+}
+
+type counts struct {
+	file, empty int
+}
+
+func (dm diskMap) fileSummary() map[int]counts {
+	summ := make(map[int]counts)
+	for e := dm.first; ; e = e.next {
+		c, ok := summ[e.fileID]
+		if !ok {
+			c = counts{}
+			summ[e.fileID] = c
+		}
+		c.file += e.fileBlocks
+		c.empty += e.emptyBlocks
+		summ[e.fileID] = c
+		if e.next == nil {
+			break
+		}
+	}
+	return summ
+}
+
+func (dm diskMap) diskSummary() counts {
+	fileSumm := dm.fileSummary()
+	var total counts
+	for _, c := range fileSumm {
+		total.file += c.file
+		total.empty += c.empty
+	}
+	return total
+
 }
 
 func main() {
@@ -134,12 +175,14 @@ func main() {
 		prev = ce
 	}
 
+	//log.Printf("Before:\nfsummary: %v\ndsummary: %v", entries.fileSummary(), entries.diskSummary())
 	for i := 0; ; i++ {
-		log.Printf("Iter %d: read %v", i, entries)
+		//log.Printf("Iter %d: read\n%v\nfsummary: %v\ndsummary: %v", i, entries, entries.fileSummary(), entries.diskSummary())
 		if entries.defragOnce() {
 			break
 		}
 	}
-
+	//log.Printf("Final:\n%v", entries)
+	//log.Printf("After:\nfsummary: %v\ndsummary: %v", entries.fileSummary(), entries.diskSummary())
 	log.Printf("Checksum: %d", entries.checksum())
 }
