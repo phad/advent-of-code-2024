@@ -36,11 +36,12 @@ func (dm diskMap) String() string {
 	return s.String()
 }
 
-func (dm diskMap) checksum() int {
-	sum, pos := 0, 0
+func (dm diskMap) checksum() int64 {
+	sum := int64(0)
+	pos := 0
 	for e := dm.first; ; e = e.next {
 		for i := 0; i < e.fileBlocks; i++ {
-			sum += (i + pos) * e.fileID
+			sum += int64((i + pos) * e.fileID)
 		}
 		pos += e.fileBlocks
 		if e.next == nil {
