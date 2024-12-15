@@ -17,7 +17,8 @@ etc.
 */
 
 const (
-	tol        = float64(1e-3)
+	tol        = float64(1e-4)
+	tolIsInt   = float64(1e-6)
 	adjustment = int64(10000000000000)
 )
 
@@ -43,47 +44,25 @@ func (m machine) cost(numA, numB int64) int64 {
 }
 
 func withinTolerance(a, b, t float64) bool {
-	return math.Abs(a-b) < t
+	d := math.Abs(a - b)
+	log.Printf("a=%v b=%v d=%v t=%v ok?=%v", a, b, d, t, d < t)
+	return d < t
 }
 
-func (m machine) solve() (ok bool, numA, numB int64) {
-	ok, numA, numB = false, 0, 0
-
-	// Assume we're going to make approximately
-	// adjustment/100 presses of both A, and B,
-	// since no input has dx or dy > 100 for A or B.
-	// We can then offset the whole problem.
-	numOffset := adjustment / 100
-	prizeOffset := pos{m.p.x - adjustment, m.p.y - adjustment}
-
+func isInt(a float64) bool {
+	ai64 := int64(a + 0.5)
+	af := float64(ai64)
+	return withinTolerance(a, af, tolIsInt)
 }
 
-func (m machine) solveOld() (ok bool, numA, numB int) {
-	ok, numA, numB = false, 0, 0
-	for b := 0; b <= 100; b++ {
-		a1 := float64(m.prize.x-b*m.b.dx) / float64(m.a.dx)
-		a2 := float64(m.prize.y-b*m.b.dy) / float64(m.a.dy)
-		if withinTolerance(a1, a2, 1e-09) && a1 >= 0.0 {
-			ok = true
-			numA = int(a1)
-			numB = b
-			return
-		}
-	}
-	return
-}
-
-// This method with floats should work but I think doesn't due to loss
-// of precision with 64-bit floats.
 func (m machine) solveFloat() (ok bool, numA, numB int64) {
+	// This method with floats should work but I think doesn't due to loss
+	// of precision with 64-bit floats.
 	ok, numA, numB = false, 0, 0
 	/*
 		(m.p.x - b*m.b.dx)/m.a.dx == (m.p.y - b*m.b.dy)/m.a.dy
-
 		m.p.x/m.a.dx - b * m.b.dx/m.a.dx == m.p.y/m.a.dy - b * m.b.dy/m.a.dy
-
 		b * (m.b.dy/m.a.dy - m.b.dx/m.a.dx) == m.p.y/m.a.dy - m.p.x/m.a.dx
-
 		b == (m.p.y/m.a.dy - m.p.x/m.a.dx) / (m.b.dy/m.a.dy - m.b.dx/m.a.dx)
 	*/
 	mpx, mpy := float64(m.p.x), float64(m.p.y)
@@ -91,17 +70,56 @@ func (m machine) solveFloat() (ok bool, numA, numB int64) {
 	mbdx, mbdy := float64(m.b.dx), float64(m.b.dy)
 
 	var b float64 = (mpy/mady - mpx/madx) / (mbdy/mady - mbdx/madx)
-	var a1 float64 = (mpx - b*mbdx) / madx
-	var a2 float64 = (mpy - b*mbdy) / mady
+	var a1 float64 = mpx/madx - b*(mbdx/madx)
+	var a2 float64 = mpy/mady - b*(mbdy/mady)
 
 	log.Printf("\na1=%v\na2=%v\n b=%v\n", a1, a2, b)
 
-	if withinTolerance(a1, a2, tol) && withinTolerance(float64(int64(a1)), a1, tol) && withinTolerance(float64(int64(b)), b, tol) {
+	if withinTolerance(a1, a2, tol) {
+		// Now check a1 and b are effectively integer.
 		numA = int64(a1)
 		numB = int64(b)
-		ok = true
+		ok = isInt(a1) && isInt(b)
 	}
 	return
+}
+
+func (m machine) solveInt64() (ok bool, numA, numB int64) {
+	mpx, mpy := m.p.x, m.p.y
+	madx, mady := m.a.dx, m.a.dy
+	mbdx, mbdy := m.b.dx, m.b.dx
+
+	log.Printf("\nmpx: %v mpy %v\nmadx %v mady %v\nmbdx %v mbdy %v", mpx, mpy, madx, mady, mbdx, mbdy)
+	if mady == 0 || madx == 0 {
+		ok = false
+		return
+	}
+
+	log.Printf("\nmbdy/mady: %v mbdx/madx: %v", mbdy/mady, mbdx/madx)
+	if madx*mbdy-mbdx*mady == 0 {
+		ok = false
+		return
+	}
+	//var b int64 = (mpy/mady - mpx/madx) / d
+	var b int64 = (madx*mpy - mady*mpx) * (madx * mady) / (mady * madx * (madx*mbdy - mbdx*mady))
+	var a1 int64 = (mpx - b*mbdx) / madx
+	var a2 int64 = (mpy - b*mbdy) / mady
+
+	log.Printf("\na1=%v\na2=%v\n b=%v\n", a1, a2, b)
+
+	if ok = m.check(a1, b); ok {
+		numA = a1
+		numB = b
+	}
+	return
+
+}
+
+func (m machine) check(a, b int64) bool {
+	x := a*m.a.dx + b*m.b.dx
+	y := a*m.a.dy + b*m.b.dy
+	log.Printf("check: calc %v want %v", pos{x, y}, m.p)
+	return pos{x, y} == m.p
 }
 
 var (
@@ -159,7 +177,8 @@ func main() {
 
 	tokens, numWon := int64(0), 0
 	for idx, m := range machines {
-		ok, numA, numB := m.solve()
+		log.Printf("Considering machine #%d", idx)
+		ok, numA, numB := m.solveInt64()
 		if ok {
 			c := m.cost(numA, numB)
 			tokens += c
