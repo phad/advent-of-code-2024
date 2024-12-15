@@ -37,12 +37,12 @@ type grid struct {
 	cells [][]rune
 }
 
-func newGrid(in []string) (*grid, error) {
+func newGrid(in []string, wantSquare bool) (*grid, error) {
 	g := &grid{h: len(in)}
 	for i, r := range in {
 		if i == 0 {
 			g.w = len(r)
-			if g.w != g.h {
+			if g.w != g.h && wantSquare {
 				return nil, fmt.Errorf("Grid isn't square: width %d != height %d", g.w, g.h)
 			}
 		}
