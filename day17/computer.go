@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"strconv"
 	"strings"
 )
 
@@ -104,6 +105,7 @@ func (c *computer) String() string {
 	var s strings.Builder
 	s.WriteString("\nComputer\n----------------\n")
 	s.WriteString(fmt.Sprintf("  Registers: A:%d B:%d C:%d\n", c.A, c.B, c.C))
+	s.WriteString(fmt.Sprintf("  Reg A/bin: %v\n", strconv.FormatInt(int64(c.A), 2)))
 	s.WriteString(fmt.Sprintf("   InstrPtr: %d\n", c.ip))
 	s.WriteString(fmt.Sprintf("    Halted?: %t\n", c.halt))
 	s.WriteString(fmt.Sprintf("    Program: %v\n", c.program))
@@ -158,8 +160,15 @@ func (c *computer) eval(opa operand) int {
 	return 0
 }
 
+func intPow(a, b int) int {
+	return int(math.Pow(float64(a), float64(b)))
+}
+
 func (c *computer) execute() error {
+	count := 0
 	for {
+		count++
+		//log.Printf("\n\n------------- Starting op #%d --------------\n", count)
 		if c.halt {
 			return errHalt
 		}
@@ -173,33 +182,52 @@ func (c *computer) execute() error {
 			return int(float64(num) / math.Pow(2.0, float64(c.eval(opa))))
 		}
 
+		log.Printf(">> %v %v", opc, opa)
+
 		switch opc {
 		case adv:
-			c.A = div(c.A, opa)
+			r := div(c.A, opa)
+			log.Printf("A/2^%s -> %d/%d -> %d -> A", opa, c.A, intPow(2, c.eval(opa)), r)
+			c.A = r
 		case bxl:
-			c.B = c.B ^ int(opa)
+			r := c.B ^ int(opa)
+			log.Printf("B^%s -> %d^%d -> %d -> B", opa, c.B, int(opa), r)
+			c.B = r
 		case bst:
-			c.B = c.eval(opa) % 8
+			r := c.eval(opa) % 8
+			log.Printf("%s %%8 -> %d %%8 -> %d -> B", opa, c.eval(opa), r)
+			c.B = r
 		case jnz:
 			if c.A == 0 {
 				// does nothing
+				log.Printf("A==0 -> no jump")
 			} else {
+				log.Printf("jump %d", int(opa))
 				c.ip = int(opa)
 				incIp = false
 			}
 		case bxc:
 			// operand is ignored
-			c.B = c.B ^ c.C
+			r := c.B ^ c.C
+			log.Printf("B^C -> %d^%d -> %d -> B", c.B, c.C, r)
+			c.B = r
 		case out:
-			c.output = append(c.output, c.eval(opa)%8)
+			r := c.eval(opa) % 8
+			log.Printf("out %s %%8 -> %d %%8 -> %d out", opa, c.eval(opa), r)
+			c.output = append(c.output, r)
 		case bdv:
-			c.B = div(c.A, opa)
+			r := div(c.A, opa)
+			log.Printf("A/2^%s -> %d/%d -> %d -> B", opa, c.A, intPow(2, c.eval(opa)), r)
+			c.B = r
 		case cdv:
-			c.C = div(c.A, opa)
+			r := div(c.A, opa)
+			log.Printf("A/2^%s -> %d/%d -> %d -> C", opa, c.A, intPow(2, c.eval(opa)), r)
+			c.C = r
 		}
 		if incIp {
 			c.ip += 2
 		}
+		//log.Printf("Computer state:\n%v", c.String())
 	}
 	return nil
 }
