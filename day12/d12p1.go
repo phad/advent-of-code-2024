@@ -15,59 +15,9 @@ BBCC
 EEEC
 */
 
-type grid struct {
-	w, h  int
-	cells [][]rune
-}
-
-func newGrid(in []string) (*grid, error) {
-	g := &grid{h: len(in)}
-	for i, r := range in {
-		if i == 0 {
-			g.w = len(r)
-			if g.w != g.h {
-				return nil, fmt.Errorf("Grid isn't square: width %d != height %d", g.w, g.h)
-			}
-		}
-		if i > 0 && len(r) != g.w {
-			return nil, fmt.Errorf("Row %d wrong size %d want %d", 1, len(r), g.w)
-		}
-		row := []rune(r)
-		g.cells = append(g.cells, row)
-	}
-	return g, nil
-}
-
-func (g *grid) String() string {
-	s := fmt.Sprintf("width:%d height:%d\n", g.w, g.h)
-	for _, r := range g.cells {
-		s += string(r)
-		s += "\n"
-	}
-	return s
-}
-
-func (g *grid) highlight(show rune) string {
-	s := fmt.Sprintf("width:%d height:%d\n", g.w, g.h)
-	for _, row := range g.cells {
-		r := make([]rune, g.w)
-		copy(r, row)
-		for i, c := range row {
-			if show != c {
-				r[i] = '.'
-			}
-		}
-		s += string(r)
-		s += "\n"
-	}
-	return s
-}
-
-type point struct{ x, y int }
-
 type region struct {
 	plant rune
-	cells []point
+	cells []aoc.Point
 }
 
 func (r *region) String() string {
@@ -75,24 +25,24 @@ func (r *region) String() string {
 }
 
 type node struct {
-	cell point
+	cell aoc.Point
 }
 
 func (n *node) String() string {
 	return fmt.Sprintf("<%v>", n.cell)
 }
 
-func (g *grid) findRegions() []*region {
+func findRegions(g *aoc.Grid[rune]) []*region {
 	// Start by creating a lot of 1-cell nodes for union-find.
 	cellsByPlant := map[rune][]*node{}
-	for y, row := range g.cells {
+	for y, row := range g.Cells {
 		for x, plant := range row {
 			cs, ok := cellsByPlant[plant]
 			if !ok {
 				cs = []*node{}
 				cellsByPlant[plant] = cs
 			}
-			n := &node{cell: point{x, y}}
+			n := &node{cell: aoc.Point{x, y}}
 			cellsByPlant[plant] = append(cellsByPlant[plant], n)
 		}
 	}
@@ -164,12 +114,12 @@ func abs(a int) int {
 	return -a
 }
 
-func adjoins(r1, r2 point) bool {
-	if r1.x == r2.x {
-		return abs(r2.y-r1.y) == 1
+func adjoins(r1, r2 aoc.Point) bool {
+	if r1.X == r2.X {
+		return abs(r2.Y-r1.Y) == 1
 	}
-	if r1.y == r2.y {
-		return abs(r2.x-r1.x) == 1
+	if r1.Y == r2.Y {
+		return abs(r2.X-r1.X) == 1
 	}
 	return false
 }
@@ -188,7 +138,7 @@ const (
 )
 
 type fence struct {
-	cell point
+	cell aoc.Point
 	edge edge
 }
 
@@ -197,8 +147,8 @@ func (r *region) findPanels() map[fence]int {
 	for _, c := range r.cells {
 		panels[fence{cell: c, edge: top}]++
 		panels[fence{cell: c, edge: right}]++
-		panels[fence{cell: point{c.x, c.y + 1}, edge: top /*c bottom*/}]++
-		panels[fence{cell: point{c.x - 1, c.y}, edge: right /*c left*/}]++
+		panels[fence{cell: aoc.Point{c.X, c.Y + 1}, edge: top /*c bottom*/}]++
+		panels[fence{cell: aoc.Point{c.X - 1, c.Y}, edge: right /*c left*/}]++
 	}
 	return panels
 }
@@ -223,19 +173,19 @@ func main() {
 		log.Fatalf("Error: %v", err)
 	}
 
-	g, err := newGrid(lines)
+	g, err := aoc.NewRuneGrid(lines, true /*=wantSquare*/)
 	if err != nil {
 		log.Fatalf("Failed to parse input: %v", err)
 	}
 	log.Printf("AllPlants:\n%v\n", g)
 
 	totalCost := 0
-	for _, reg := range g.findRegions() {
+	for _, reg := range findRegions(g) {
 		area := reg.area()
 		perim := reg.perimeter()
 		cost := area * perim
 		totalCost += cost
-		log.Printf("Plant %s:\n%vArea: %d\nPerimeter: %d\nCost: %d\n\n", string(reg.plant), g.highlight(reg.plant), area, perim, cost)
+		log.Printf("Plant %s:\n%vArea: %d\nPerimeter: %d\nCost: %d\n\n", string(reg.plant), g.Highlight(reg.plant), area, perim, cost)
 	}
 	log.Printf("Total cost: %d", totalCost)
 }

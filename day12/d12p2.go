@@ -15,63 +15,9 @@ BBCC
 EEEC
 */
 
-type grid struct {
-	w, h  int
-	cells [][]rune
-}
-
-func newGrid(in []string) (*grid, error) {
-	g := &grid{h: len(in)}
-	for i, r := range in {
-		if i == 0 {
-			g.w = len(r)
-			if g.w != g.h {
-				return nil, fmt.Errorf("Grid isn't square: width %d != height %d", g.w, g.h)
-			}
-		}
-		if i > 0 && len(r) != g.w {
-			return nil, fmt.Errorf("Row %d wrong size %d want %d", 1, len(r), g.w)
-		}
-		row := []rune(r)
-		g.cells = append(g.cells, row)
-	}
-	return g, nil
-}
-
-func (g *grid) String() string {
-	s := fmt.Sprintf("width:%d height:%d\n", g.w, g.h)
-	for _, r := range g.cells {
-		s += string(r)
-		s += "\n"
-	}
-	return s
-}
-
-func (g *grid) highlight(show rune) string {
-	s := fmt.Sprintf("width:%d height:%d\n", g.w, g.h)
-	for _, row := range g.cells {
-		r := make([]rune, g.w)
-		copy(r, row)
-		for i, c := range row {
-			if show != c {
-				r[i] = '.'
-			}
-		}
-		s += string(r)
-		s += "\n"
-	}
-	return s
-}
-
-type point struct{ x, y int }
-
-func (p point) String() string {
-	return fmt.Sprintf("(%d,%d)", p.x, p.y)
-}
-
 type region struct {
 	plant rune
-	cells []point
+	cells []aoc.Point
 }
 
 func (r *region) String() string {
@@ -79,24 +25,24 @@ func (r *region) String() string {
 }
 
 type node struct {
-	cell point
+	cell aoc.Point
 }
 
 func (n *node) String() string {
 	return fmt.Sprintf("<%v>", n.cell)
 }
 
-func (g *grid) findRegions() []*region {
+func findRegions(g *aoc.Grid[rune]) []*region {
 	// Start by creating a lot of 1-cell nodes for union-find.
 	cellsByPlant := map[rune][]*node{}
-	for y, row := range g.cells {
+	for y, row := range g.Cells {
 		for x, plant := range row {
 			cs, ok := cellsByPlant[plant]
 			if !ok {
 				cs = []*node{}
 				cellsByPlant[plant] = cs
 			}
-			n := &node{cell: point{x, y}}
+			n := &node{cell: aoc.Point{x, y}}
 			cellsByPlant[plant] = append(cellsByPlant[plant], n)
 		}
 	}
@@ -168,12 +114,12 @@ func abs(a int) int {
 	return -a
 }
 
-func cellAdjoins(r1, r2 point) bool {
-	if r1.x == r2.x {
-		return abs(r2.y-r1.y) == 1
+func cellAdjoins(r1, r2 aoc.Point) bool {
+	if r1.X == r2.X {
+		return abs(r2.Y-r1.Y) == 1
 	}
-	if r1.y == r2.y {
-		return abs(r2.x-r1.x) == 1
+	if r1.Y == r2.Y {
+		return abs(r2.X-r1.X) == 1
 	}
 	return false
 }
@@ -215,7 +161,7 @@ func (w winding) String() string {
 }
 
 type fence struct {
-	cell point
+	cell aoc.Point
 	edge edge
 }
 
@@ -225,7 +171,7 @@ func (f fence) String() string {
 
 func (r *region) findPanels() map[fence]map[winding]int {
 	panels := map[fence]map[winding]int{}
-	inc := func(c point, e edge, w winding) {
+	inc := func(c aoc.Point, e edge, w winding) {
 		f := fence{cell: c, edge: e}
 		wc, ok := panels[f]
 		if !ok {
@@ -238,8 +184,8 @@ func (r *region) findPanels() map[fence]map[winding]int {
 	for _, c := range r.cells {
 		inc(c, top, cw)
 		inc(c, right, cw)
-		inc(point{c.x, c.y + 1}, top, ccw /*c bottom cw*/)
-		inc(point{c.x - 1, c.y}, right, ccw /*c left cw*/)
+		inc(aoc.Point{c.X, c.Y + 1}, top, ccw /*c bottom cw*/)
+		inc(aoc.Point{c.X - 1, c.Y}, right, ccw /*c left cw*/)
 	}
 	return panels
 }
@@ -320,17 +266,17 @@ func fenceAdjoins(a, b wFence) bool {
 	}
 	switch a.f.edge {
 	case top:
-		if a.f.cell.y != b.f.cell.y {
+		if a.f.cell.Y != b.f.cell.Y {
 			return false
 		}
-		if abs(b.f.cell.x-a.f.cell.x) != 1 {
+		if abs(b.f.cell.X-a.f.cell.X) != 1 {
 			return false
 		}
 	case right:
-		if a.f.cell.x != b.f.cell.x {
+		if a.f.cell.X != b.f.cell.X {
 			return false
 		}
-		if abs(b.f.cell.y-a.f.cell.y) != 1 {
+		if abs(b.f.cell.Y-a.f.cell.Y) != 1 {
 			return false
 		}
 	}
@@ -347,20 +293,20 @@ func main() {
 		log.Fatalf("Error: %v", err)
 	}
 
-	g, err := newGrid(lines)
+	g, err := aoc.NewRuneGrid(lines, true /*=wantSquare*/)
 	if err != nil {
 		log.Fatalf("Failed to parse input: %v", err)
 	}
 	log.Printf("AllPlants:\n%v\n", g)
 
 	totalCost := 0
-	for _, reg := range g.findRegions() {
+	for _, reg := range findRegions(g) {
 		area := reg.area()
 		perim := reg.perimeter()
 		sides := reg.sides()
 		cost := area * sides
 		totalCost += cost
-		log.Printf("Plant %s:\n%vArea: %d\nPerimeter: %d\nSides: %d\nCost: %d\n\n", string(reg.plant), g.highlight(reg.plant), area, perim, sides, cost)
+		log.Printf("Plant %s:\n%vArea: %d\nPerimeter: %d\nSides: %d\nCost: %d\n\n", string(reg.plant), g.Highlight(reg.plant), area, perim, sides, cost)
 	}
 	log.Printf("Total cost: %d", totalCost)
 }

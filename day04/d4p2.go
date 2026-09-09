@@ -14,11 +14,6 @@ const xmas = "MAS"
 
 var lineRE = regexp.MustCompile("mul\\(([0-9]+),([0-9]+)\\)")
 
-type grid struct {
-	w, h  int
-	cells [][]rune
-}
-
 type coord struct {
 	y, x int
 }
@@ -28,63 +23,35 @@ type coordRune struct {
 	r rune
 }
 
-func newGrid(in []string) (*grid, error) {
-	g := &grid{h: len(in)}
-	for i, r := range in {
-		if i == 0 {
-			g.w = len(r)
-			if g.w != g.h {
-				return nil, fmt.Errorf("Grid isn't square: width %d != height %d", g.w, g.h)
-			}
-		}
-		if i > 0 && len(r) != g.w {
-			return nil, fmt.Errorf("Row %d wrong size %d want %d", 1, len(r), g.w)
-		}
-		row := []rune(r)
-		g.cells = append(g.cells, row)
-	}
-	return g, nil
-}
-
-func (g *grid) String() string {
-	s := fmt.Sprintf("width:%d height:%d\n", g.w, g.h)
-	for _, r := range g.cells {
-		s += string(r)
-		s += "\n"
-	}
-	return s
-}
-
-func (g *grid) highlight(show string) string {
-	s := fmt.Sprintf("width:%d height:%d\n", g.w, g.h)
-	for _, row := range g.cells {
-		r := make([]rune, g.w)
+// highlight renders the grid, replacing any rune not present in show with '.'.
+func highlight(g *aoc.Grid[rune], show string) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "width:%d height:%d\n", g.W, g.H)
+	for _, row := range g.Cells {
+		r := make([]rune, g.W)
 		copy(r, row)
 		for i, c := range row {
 			if !strings.ContainsRune(show, c) {
 				r[i] = '.'
 			}
 		}
-		s += string(r)
-		s += "\n"
+		b.WriteString(string(r))
+		b.WriteByte('\n')
 	}
-	return s
+	return b.String()
 }
 
-func (g *grid) coordsDiag1(s string) []coord {
+func coordsDiag1(g *aoc.Grid[rune], s string) []coord {
 	var check [][]coordRune
-	for y := 0; y < 2*g.h-1; y++ {
+	for y := 0; y < 2*g.H-1; y++ {
 		var diag []coordRune
 		for x := 0; x <= y; x++ {
 			yy := y - x
-			if yy >= g.h || x >= g.w {
+			if yy >= g.H || x >= g.W {
 				continue
 			}
-			//log.Printf("y:%d,x:%d", yy, x)
-			diag = append(diag, coordRune{c: coord{y: yy, x: x}, r: g.cells[yy][x]})
+			diag = append(diag, coordRune{c: coord{y: yy, x: x}, r: g.Cells[yy][x]})
 		}
-		//log.Printf("diag1 %d: %q", y, string(diag))
-
 		check = append(check, diag)
 		if len(diag) > 1 {
 			check = append(check, reverse(diag))
@@ -93,20 +60,17 @@ func (g *grid) coordsDiag1(s string) []coord {
 	return countAll(s, check)
 }
 
-func (g *grid) coordsDiag2(s string) []coord {
+func coordsDiag2(g *aoc.Grid[rune], s string) []coord {
 	var check [][]coordRune
-	for y := 0; y < 2*g.h-1; y++ {
+	for y := 0; y < 2*g.H-1; y++ {
 		var diag []coordRune
-		for x := g.w - 1; x >= g.w-1-y; x-- {
-			yy := y - (g.w - 1 - x)
-			if yy >= g.h || x < 0 {
+		for x := g.W - 1; x >= g.W-1-y; x-- {
+			yy := y - (g.W - 1 - x)
+			if yy >= g.H || x < 0 {
 				continue
 			}
-			//log.Printf("y:%d,x:%d", yy, x)
-			diag = append(diag, coordRune{c: coord{y: yy, x: x}, r: g.cells[yy][x]})
+			diag = append(diag, coordRune{c: coord{y: yy, x: x}, r: g.Cells[yy][x]})
 		}
-		//log.Printf("diag2 %d: %q", y, string(diag))
-
 		check = append(check, diag)
 		if len(diag) > 1 {
 			check = append(check, reverse(diag))
@@ -162,15 +126,15 @@ func main() {
 		log.Fatalf("Error: %v", err)
 	}
 
-	g, err := newGrid(lines)
+	g, err := aoc.NewRuneGrid(lines, true /*=wantSquare*/)
 	if err != nil {
 		log.Fatalf("Error: %v", err)
 	}
 
-	log.Printf("Grid:\n%v", g.highlight(xmas))
+	log.Printf("Grid:\n%v", highlight(g, xmas))
 
-	d1 := g.coordsDiag1(xmas)
-	d2 := g.coordsDiag2(xmas)
+	d1 := coordsDiag1(g, xmas)
+	d2 := coordsDiag2(g, xmas)
 
 	//log.Printf("nd1:%d nd2:%d", len(d1), len(d2))
 	//log.Printf("d1:%v\nd2:%v", d1, d2)

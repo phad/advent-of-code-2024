@@ -60,7 +60,7 @@ func (m move) String() string {
 
 type state struct {
 	// pos is the start position before the move
-	pos point
+	pos aoc.Point
 	// dir is the direction the reindeer faces before the move
 	dir direction
 	// move is the move chosen at position pos
@@ -74,10 +74,10 @@ func (s state) String() string {
 }
 
 type model struct {
-	arena  *grid
+	arena  *aoc.Grid[rune]
 	states []state
-	start  point
-	end    point
+	start  aoc.Point
+	end    aoc.Point
 	lowest it
 }
 
@@ -90,17 +90,17 @@ func (m *model) String() string {
 
 func newModel(lines []string) (*model, error) {
 	log.Printf(">>newModel")
-	arena, err := newGrid(lines, true /*=wantSquare*/)
+	arena, err := aoc.NewRuneGrid(lines, true /*=wantSquare*/)
 	if err != nil {
 		return nil, err
 	}
 
-	startPos, ok := arena.find('S')
+	startPos, ok := arena.Find('S')
 	if !ok {
 		return nil, fmt.Errorf("Can't find start pos!")
 	}
 
-	endPos, ok := arena.find('E')
+	endPos, ok := arena.Find('E')
 	if !ok {
 		return nil, fmt.Errorf("Can't find end pos!")
 	}
@@ -161,7 +161,7 @@ func (m *model) innerMove() bool {
 		curSt.num++
 		nextSt := m.prepareNext(*curSt)
 		curSt.pos = nextSt.pos
-		_ = m.arena.set(nextSt.pos, rune(nextSt.dir))
+		_ = m.arena.Set(nextSt.pos, rune(nextSt.dir))
 		log.Printf("innerMove: model=%v", m)
 		log.Printf("\n%v\n", m.arena)
 	}
@@ -177,7 +177,7 @@ func (m *model) innerMove() bool {
 		curSt.mv = mv
 		nextSt := m.prepareNext(*curSt)
 		m.states = append(m.states, nextSt)
-		_ = m.arena.set(nextSt.pos, rune(nextSt.dir))
+		_ = m.arena.Set(nextSt.pos, rune(nextSt.dir))
 		//log.Printf("Trying move %v\nState-stack:\n%v", mv, m.states)
 		if done := m.innerMove(); done {
 			// The move looked ok so continue from here.
@@ -185,7 +185,7 @@ func (m *model) innerMove() bool {
 		}
 		// Move 'mv' didn't work out, so unwind
 		m.states = m.states[0 : len(m.states)-1]
-		_ = m.arena.set(nextSt.pos, '.')
+		_ = m.arena.Set(nextSt.pos, '.')
 	}
 	// Looks like none of the available moves worked - indicate need to backtrack.
 	if len(m.states) != stateSize {
@@ -204,7 +204,7 @@ func (m *model) canAdvance(st state) bool {
 	// Given st.pos and st.dir, calculate the cell we'd
 	// move into.  Return false if it's a wall '#'.
 	nextSt := m.prepareNext(state{pos: st.pos, dir: st.dir, mv: advance})
-	nextCell, ok := m.arena.at(nextSt.pos)
+	nextCell, ok := m.arena.At(nextSt.pos)
 	if !ok {
 		log.Fatalf("Ran off the grid at %v!", nextSt.pos)
 	}
@@ -222,22 +222,22 @@ func (m *model) canTurn(st state) []move {
 	// Given st.pos and st.dir, calculate if neighbouring
 	// cells (other than the one 'advance' goes to) are
 	// available.
-	var cwPos, ccwPos point
+	var cwPos, ccwPos aoc.Point
 	switch st.dir {
 	case north:
-		cwPos, ccwPos = point{st.pos.x + 1, st.pos.y}, point{st.pos.x - 1, st.pos.y}
+		cwPos, ccwPos = aoc.Point{st.pos.X + 1, st.pos.Y}, aoc.Point{st.pos.X - 1, st.pos.Y}
 	case east:
-		cwPos, ccwPos = point{st.pos.x, st.pos.y + 1}, point{st.pos.x, st.pos.y - 1}
+		cwPos, ccwPos = aoc.Point{st.pos.X, st.pos.Y + 1}, aoc.Point{st.pos.X, st.pos.Y - 1}
 	case south:
-		cwPos, ccwPos = point{st.pos.x - 1, st.pos.y}, point{st.pos.x + 1, st.pos.y}
+		cwPos, ccwPos = aoc.Point{st.pos.X - 1, st.pos.Y}, aoc.Point{st.pos.X + 1, st.pos.Y}
 	case west:
-		cwPos, ccwPos = point{st.pos.x, st.pos.y - 1}, point{st.pos.x, st.pos.y + 1}
+		cwPos, ccwPos = aoc.Point{st.pos.X, st.pos.Y - 1}, aoc.Point{st.pos.X, st.pos.Y + 1}
 	}
 	var moves []move
-	if cwCell, ok := m.arena.at(cwPos); ok && cwCell != '#' {
+	if cwCell, ok := m.arena.At(cwPos); ok && cwCell != '#' {
 		moves = append(moves, cwTurn)
 	}
-	if ccwCell, ok := m.arena.at(ccwPos); ok && ccwCell != '#' {
+	if ccwCell, ok := m.arena.At(ccwPos); ok && ccwCell != '#' {
 		moves = append(moves, ccwTurn)
 	}
 	return moves
@@ -248,13 +248,13 @@ func (m *model) prepareNext(currSt state) state {
 	if currSt.mv == advance {
 		switch currSt.dir {
 		case north:
-			next.pos.y--
+			next.pos.Y--
 		case east:
-			next.pos.x++
+			next.pos.X++
 		case south:
-			next.pos.y++
+			next.pos.Y++
 		case west:
-			next.pos.x--
+			next.pos.X--
 		}
 		return next
 	}

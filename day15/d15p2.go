@@ -50,10 +50,10 @@ func readMoves(in []string) ([]move, error) {
 }
 
 type model struct {
-	arena *grid
+	arena *aoc.Grid[rune]
 	moves []move
 	next  int
-	pos   point
+	pos   aoc.Point
 }
 
 func (m *model) String() string {
@@ -92,7 +92,7 @@ func newModel(lines []string) (*model, error) {
 		}
 		modLines = append(modLines, sb.String())
 	}
-	arena, err := newGrid(modLines, false /*=wantSquare*/)
+	arena, err := aoc.NewRuneGrid(modLines, false /*=wantSquare*/)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +102,7 @@ func newModel(lines []string) (*model, error) {
 		return nil, err
 	}
 
-	pos, ok := arena.find('@')
+	pos, ok := arena.Find('@')
 	if !ok {
 		return nil, fmt.Errorf("Can't find robot!")
 	}
@@ -130,52 +130,52 @@ func (m *model) doMove() bool {
 }
 
 // returns true if something was moved, or in dryRunmode, if something _can_ be moved.
-func (m *model) innerMove(pos point, move move, dryRun bool) (point, bool) {
+func (m *model) innerMove(pos aoc.Point, move move, dryRun bool) (aoc.Point, bool) {
 	var nextCell rune
-	var nextPos point
+	var nextPos aoc.Point
 	switch move {
 	case up:
-		nextPos = point{pos.x, pos.y - 1}
+		nextPos = aoc.Point{pos.X, pos.Y - 1}
 	case right:
-		nextPos = point{pos.x + 1, pos.y}
+		nextPos = aoc.Point{pos.X + 1, pos.Y}
 	case down:
-		nextPos = point{pos.x, pos.y + 1}
+		nextPos = aoc.Point{pos.X, pos.Y + 1}
 	case left:
-		nextPos = point{pos.x - 1, pos.y}
+		nextPos = aoc.Point{pos.X - 1, pos.Y}
 	}
-	nextCell, ok := m.arena.at(nextPos)
+	nextCell, ok := m.arena.At(nextPos)
 	if !ok {
 		log.Fatalf("Ran off the grid at %v!", nextPos)
 	}
 	if nextCell == '#' {
 		// boundary or obstacle, can't move here.
 		//log.Printf("Hit boundary trying to move to %v currently occupied by %v", nextPos, nextCell)
-		return point{}, false
+		return aoc.Point{}, false
 	}
 	// Special double-recursion if moving up or down against [ or ]
 	if move == up || move == down {
-		var nextNeighbourPos point
+		var nextNeighbourPos aoc.Point
 		if nextCell == '[' {
 			// Need to see if we can shift this first, plus it's right side neighbour.
-			nextNeighbourPos = point{nextPos.x + 1, nextPos.y}
+			nextNeighbourPos = aoc.Point{nextPos.X + 1, nextPos.Y}
 		} else if nextCell == ']' {
 			// Similar but here the neighbour is on the left side.
-			nextNeighbourPos = point{nextPos.x - 1, nextPos.y}
+			nextNeighbourPos = aoc.Point{nextPos.X - 1, nextPos.Y}
 		}
 		//log.Printf("checking %v and %v", nextPos, nextNeighbourPos)
 		if nextCell == '[' || nextCell == ']' {
 			if _, ok := m.innerMove(nextPos, move, dryRun); !ok {
-				return point{}, false
+				return aoc.Point{}, false
 			}
 			if _, ok := m.innerMove(nextNeighbourPos, move, dryRun); !ok {
-				return point{}, false
+				return aoc.Point{}, false
 			}
 		}
 	} else {
 		// For left or right we only check the immediate next cell.
 		if nextCell == '[' || nextCell == ']' {
 			if _, ok := m.innerMove(nextPos, move, dryRun); !ok {
-				return point{}, false
+				return aoc.Point{}, false
 			}
 		}
 
@@ -184,7 +184,7 @@ func (m *model) innerMove(pos point, move move, dryRun bool) (point, bool) {
 	// Make the move!
 	//log.Printf("Trying to swap grid cells %v<->%v: dryRun=%t", pos, nextPos, dryRun)
 	if !dryRun {
-		if ok := m.arena.swap(pos, nextPos); !ok {
+		if ok := m.arena.Swap(pos, nextPos); !ok {
 			log.Fatalf("Failed to swap grid cells %v<->%v!", pos, nextPos)
 		}
 	}
@@ -194,8 +194,8 @@ func (m *model) innerMove(pos point, move move, dryRun bool) (point, bool) {
 
 func (m *model) gpsSum() int {
 	sum := 0
-	m.arena.findAll('[', func(p point) bool {
-		coord := 100*p.y + p.x
+	m.arena.FindAll('[', func(p aoc.Point) bool {
+		coord := 100*p.Y + p.X
 		sum += coord
 		return true // keep going
 	})

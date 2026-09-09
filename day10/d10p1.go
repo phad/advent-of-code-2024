@@ -1,86 +1,41 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/phad/advent-of-code-2024/aoc"
 )
 
-type grid struct {
-	w, h  int
-	cells [][]int
-}
-
-func newGrid(in []string) (*grid, error) {
-	g := &grid{h: len(in)}
-	for i, r := range in {
-		if i == 0 {
-			g.w = len(r)
-			if g.w != g.h {
-				return nil, fmt.Errorf("Grid isn't square: width %d != height %d", g.w, g.h)
-			}
-		}
-		if i > 0 && len(r) != g.w {
-			return nil, fmt.Errorf("Row %d wrong size %d want %d", 1, len(r), g.w)
-		}
-		var row []int
-		for j := 0; j < g.w; j++ {
-			row = append(row, int(aoc.MustParseInt(r[j:j+1])))
-		}
-		g.cells = append(g.cells, row)
-	}
-	return g, nil
-}
-
-func (g *grid) String() string {
-	var s strings.Builder
-	s.WriteString(fmt.Sprintf("width:%d height:%d\n", g.w, g.h))
-	for _, r := range g.cells {
-		for _, c := range r {
-			s.WriteString(fmt.Sprintf("%d", c))
-		}
-		s.WriteRune('\n')
-	}
-	return s.String()
-}
-
-type point struct{ x, y int }
-
-func (p point) String() string {
-	return fmt.Sprintf("(%d,%d)", p.x, p.y)
-}
-
-func (g *grid) heightAt(p point) int {
-	if p.x < 0 || p.x >= g.w || p.y < 0 || p.y >= g.h {
+func heightAt(g *aoc.Grid[int], p aoc.Point) int {
+	v, ok := g.At(p)
+	if !ok {
 		log.Fatalf("Point %v is outside the grid!", p)
 	}
-	return g.cells[p.y][p.x]
+	return v
 }
 
-type route []point
+type route []aoc.Point
 
 type trailhead struct {
-	start  point
+	start  aoc.Point
 	routes []route
 }
 
 func (th trailhead) score() int {
-	m := map[point]int{}
+	m := map[aoc.Point]int{}
 	for _, r := range th.routes {
 		m[r[len(r)-1]]++
 	}
 	return len(m)
 }
 
-func (g *grid) findTrailheads() []*trailhead {
+func findTrailheads(g *aoc.Grid[int]) []*trailhead {
 	var ths []*trailhead
-	for y, r := range g.cells {
+	for y, r := range g.Cells {
 		for x, c := range r {
 			if c == 0 {
-				ths = append(ths, &trailhead{start: point{x, y}})
+				ths = append(ths, &trailhead{start: aoc.Point{x, y}})
 			}
 		}
 	}
@@ -117,21 +72,21 @@ type state struct {
 }
 
 type routeFinder struct {
-	g      *grid
+	g      *aoc.Grid[int]
 	states []*state
 }
 
-func newRouteFinder(g *grid) *routeFinder {
+func newRouteFinder(g *aoc.Grid[int]) *routeFinder {
 	return &routeFinder{g: g}
 }
 
 func (rf *routeFinder) addRoutesFor(th *trailhead) {
-	//log.Printf("Analysing trailhead at %v height %d", th.start, rf.g.heightAt(th.start))
+	//log.Printf("Analysing trailhead at %v height %d", th.start, heightAt(rf.g, th.start))
 	// Iniialise search, retaining current and previous states in a stack.
 	pos := th.start
 	st := &state{
-		level:   rf.g.heightAt(pos),
-		visited: []point{pos},
+		level:   heightAt(rf.g, pos),
+		visited: []aoc.Point{pos},
 	}
 	rf.states = append(rf.states, st)
 
@@ -141,55 +96,55 @@ func (rf *routeFinder) addRoutesFor(th *trailhead) {
 	})
 }
 
-func (rf *routeFinder) iterate(pos point, onRouteDone func(st *state)) {
+func (rf *routeFinder) iterate(pos aoc.Point, onRouteDone func(st *state)) {
 	if len(rf.states) == 0 {
 		log.Fatalf("Can't iterate when state stack is empty!")
 	}
 	// Are we at the max height of 9? If so, report this route.
 	st := rf.states[len(rf.states)-1]
-	if rf.g.heightAt(pos) == 9 {
+	if heightAt(rf.g, pos) == 9 {
 		//log.Printf("Completed route at %s height 9", pos)
 		onRouteDone(st)
 		return
 	}
 
-	if pos.x > 0 {
+	if pos.X > 0 {
 		st.todo = append(st.todo, left)
 	}
-	if pos.x < rf.g.w-1 {
+	if pos.X < rf.g.W-1 {
 		st.todo = append(st.todo, right)
 	}
-	if pos.y > 0 {
+	if pos.Y > 0 {
 		st.todo = append(st.todo, up)
 	}
-	if pos.y < rf.g.h-1 {
+	if pos.Y < rf.g.H-1 {
 		st.todo = append(st.todo, down)
 	}
 	//log.Printf("From %v can go %v", pos, st.todo)
 
 	// Iterate todo list.
 	for _, dir := range st.todo {
-		var next point
+		var next aoc.Point
 		switch dir {
 		case up:
-			next = point{x: pos.x, y: pos.y - 1}
+			next = aoc.Point{X: pos.X, Y: pos.Y - 1}
 		case right:
-			next = point{x: pos.x + 1, y: pos.y}
+			next = aoc.Point{X: pos.X + 1, Y: pos.Y}
 		case down:
-			next = point{x: pos.x, y: pos.y + 1}
+			next = aoc.Point{X: pos.X, Y: pos.Y + 1}
 		case left:
-			next = point{x: pos.x - 1, y: pos.y}
+			next = aoc.Point{X: pos.X - 1, Y: pos.Y}
 		}
 		// Can only move to a location with height 1 greater than current height.
-		if rf.g.heightAt(next) != st.level+1 {
-			//log.Printf("Not going to %v because it's wrong height %d want %d", next, rf.g.heightAt(next), st.level+1)
+		if heightAt(rf.g, next) != st.level+1 {
+			//log.Printf("Not going to %v because it's wrong height %d want %d", next, heightAt(rf.g, next), st.level+1)
 			continue
 		}
 		// This height looks good. Stack new state and iterate.
 		//log.Printf("Trying move from %v height %d to %v height %d", pos, st.level, next, st.level+1)
 		nextSt := &state{
 			level:   st.level + 1,
-			visited: make([]point, len(st.visited)),
+			visited: make([]aoc.Point, len(st.visited)),
 		}
 		copy(nextSt.visited, st.visited)
 		nextSt.visited = append(nextSt.visited, next)
@@ -208,13 +163,13 @@ func main() {
 		log.Fatalf("Error: %v", err)
 	}
 
-	g, err := newGrid(lines)
+	g, err := aoc.NewDigitGrid(lines, true /*=wantSquare*/)
 	if err != nil {
 		log.Fatalf("Error: %v", err)
 	}
 	log.Printf("Grid:\n%v", g)
 
-	ths := g.findTrailheads()
+	ths := findTrailheads(g)
 	rf := newRouteFinder(g)
 	score := 0
 	for i, th := range ths {

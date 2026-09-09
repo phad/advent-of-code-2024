@@ -50,10 +50,10 @@ func readMoves(in []string) ([]move, error) {
 }
 
 type model struct {
-	arena *grid
+	arena *aoc.Grid[rune]
 	moves []move
 	next  int
-	pos   point
+	pos   aoc.Point
 }
 
 func (m *model) String() string {
@@ -73,7 +73,7 @@ func newModel(lines []string) (*model, error) {
 		return nil, fmt.Errorf("Didn't find the empty divider line.")
 	}
 
-	arena, err := newGrid(lines[0:dividerPos], true /*=wantSquare*/)
+	arena, err := aoc.NewRuneGrid(lines[0:dividerPos], true /*=wantSquare*/)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +83,7 @@ func newModel(lines []string) (*model, error) {
 		return nil, err
 	}
 
-	pos, ok := arena.find('@')
+	pos, ok := arena.Find('@')
 	if !ok {
 		return nil, fmt.Errorf("Can't find robot!")
 	}
@@ -110,37 +110,37 @@ func (m *model) doMove() bool {
 }
 
 // returns true if something was moved.
-func (m *model) innerMove(pos point, move move) (point, bool) {
+func (m *model) innerMove(pos aoc.Point, move move) (aoc.Point, bool) {
 	var nextCell rune
-	var nextPos point
+	var nextPos aoc.Point
 	switch move {
 	case up:
-		nextPos = point{pos.x, pos.y - 1}
+		nextPos = aoc.Point{pos.X, pos.Y - 1}
 	case right:
-		nextPos = point{pos.x + 1, pos.y}
+		nextPos = aoc.Point{pos.X + 1, pos.Y}
 	case down:
-		nextPos = point{pos.x, pos.y + 1}
+		nextPos = aoc.Point{pos.X, pos.Y + 1}
 	case left:
-		nextPos = point{pos.x - 1, pos.y}
+		nextPos = aoc.Point{pos.X - 1, pos.Y}
 	}
-	nextCell, ok := m.arena.at(nextPos)
+	nextCell, ok := m.arena.At(nextPos)
 	if !ok {
 		log.Fatalf("Ran off the grid at %v!", nextPos)
 	}
 	if nextCell == '#' {
 		// boundary or obstacle, can't move here.
 		//log.Printf("Hit boundary trying to move to %v currently occupied by %v", nextPos, nextCell)
-		return point{}, false
+		return aoc.Point{}, false
 	}
 	if nextCell == 'O' {
 		// Need to see if we can shift this first.
 		if _, ok := m.innerMove(nextPos, move); !ok {
-			return point{}, false
+			return aoc.Point{}, false
 		}
 	}
 	// Make the move!
 	//log.Printf("Trying to swap grid cells %v<->%v!", pos, nextPos)
-	if ok := m.arena.swap(pos, nextPos); !ok {
+	if ok := m.arena.Swap(pos, nextPos); !ok {
 		log.Fatalf("Failed to swap grid cells %v<->%v!", pos, nextPos)
 	}
 	//log.Printf("innerMove: %v", m.arena)
@@ -149,8 +149,8 @@ func (m *model) innerMove(pos point, move move) (point, bool) {
 
 func (m *model) gpsSum() int {
 	sum := 0
-	m.arena.findAll('O', func(p point) bool {
-		coord := 100*p.y + p.x
+	m.arena.FindAll('O', func(p aoc.Point) bool {
+		coord := 100*p.Y + p.X
 		sum += coord
 		return true // keep going
 	})
