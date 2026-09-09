@@ -5,6 +5,8 @@ import (
 	"log"
 	"os"
 	"strings"
+
+	"github.com/phad/advent-of-code-2024/aoc"
 )
 
 /* input format
@@ -170,7 +172,7 @@ func main() {
 	if len(os.Args) < 2 {
 		log.Fatal("Usage: main <in file>")
 	}
-	lines, err := readLines(os.Args[1])
+	lines, err := aoc.ReadLines(os.Args[1])
 	if err != nil {
 		log.Fatalf("Error: %v", err)
 	}
@@ -185,10 +187,10 @@ func main() {
 	for i := 0; i <= len(serializedDiskMap); i += 2 {
 		ce := &diskMapEntry{
 			fileID:     i / 2,
-			fileBlocks: int(mustParseInt(serializedDiskMap[i : i+1])),
+			fileBlocks: int(aoc.MustParseInt(serializedDiskMap[i : i+1])),
 		}
 		if i < len(serializedDiskMap)-1 {
-			ce.emptyBlocks = int(mustParseInt(serializedDiskMap[i+1 : i+2]))
+			ce.emptyBlocks = int(aoc.MustParseInt(serializedDiskMap[i+1 : i+2]))
 		}
 		if prev == nil {
 			entries.first = ce

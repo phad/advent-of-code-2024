@@ -5,6 +5,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/phad/advent-of-code-2024/aoc"
 )
 
 /* Example input
@@ -24,7 +26,7 @@ func convert(s string) []int {
 	bits := strings.Split(seq, ",")
 	var out []int
 	for _, b := range bits {
-		out = append(out, int(mustParseInt(b)))
+		out = append(out, int(aoc.MustParseInt(b)))
 	}
 	return out
 }
@@ -65,7 +67,7 @@ func main() {
 	if len(os.Args) < 2 {
 		log.Fatal("Usage: main <in file>")
 	}
-	lines, err := readLines(os.Args[1])
+	lines, err := aoc.ReadLines(os.Args[1])
 	if err != nil {
 		log.Fatalf("Error: %v", err)
 	}
@@ -74,7 +76,7 @@ func main() {
 	var glitchedA int
 	if len(os.Args) == 3 {
 		log.Printf("Overriding glitchedA: %s", os.Args[2])
-		glitchedA = int(mustParseInt(os.Args[2]))
+		glitchedA = int(aoc.MustParseInt(os.Args[2]))
 	} else {
 		glitchedA = seed(permute(input))
 		log.Printf("Calculating glitchedA: %d", glitchedA)

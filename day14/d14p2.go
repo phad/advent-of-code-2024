@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/phad/advent-of-code-2024/aoc"
 )
 
 /* Example input
@@ -57,8 +59,8 @@ func mustExtractFourInts(re *regexp.Regexp, in string) (pos, vec) {
 	matches := re.FindAllStringSubmatch(in, -1)
 	for _, m := range matches {
 		//log.Printf("match #%v: %v", i, m)
-		p := pos{int(mustParseInt(m[1])), int(mustParseInt(m[2]))}
-		v := vec{int(mustParseInt(m[3])), int(mustParseInt(m[4]))}
+		p := pos{int(aoc.MustParseInt(m[1])), int(aoc.MustParseInt(m[2]))}
+		v := vec{int(aoc.MustParseInt(m[3])), int(aoc.MustParseInt(m[4]))}
 		return p, v
 	}
 	return pos{0, 0}, vec{0, 0}
@@ -138,7 +140,7 @@ func main() {
 	if len(os.Args) < 2 {
 		log.Fatal("Usage: main <in file>")
 	}
-	lines, err := readLines(os.Args[1])
+	lines, err := aoc.ReadLines(os.Args[1])
 	if err != nil {
 		log.Fatalf("Error: %v", err)
 	}

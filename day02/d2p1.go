@@ -5,18 +5,11 @@ import (
 	"log"
 	"os"
 	"regexp"
-	"strconv"
+
+	"github.com/phad/advent-of-code-2024/aoc"
 )
 
 var lineRE = regexp.MustCompile("([0-9]+)")
-
-func mustParseInt(s string) int64 {
-	v, err := strconv.ParseInt(s, 10, 64)
-	if err != nil {
-		log.Fatalf("ParseInt(%q) err=%v", s, err)
-	}
-	return v
-}
 
 type level []int64
 
@@ -28,7 +21,7 @@ func makeLevel(s string) (level, error) {
 	// log.Printf("Input line %d contains %v", idx, matches)A
 	l := make(level, 0, len(matches))
 	for _, m := range matches {
-		l = append(l, mustParseInt(m))
+		l = append(l, aoc.MustParseInt(m))
 	}
 	return l, nil
 }
@@ -68,7 +61,7 @@ func main() {
 	if len(os.Args) < 2 {
 		log.Fatal("Usage: main <in file>")
 	}
-	lines, err := readLines(os.Args[1])
+	lines, err := aoc.ReadLines(os.Args[1])
 	if err != nil {
 		log.Fatalf("Error: %v", err)
 	}

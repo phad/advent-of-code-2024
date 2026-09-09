@@ -6,6 +6,8 @@ import (
 	"math"
 	"os"
 	"strings"
+
+	"github.com/phad/advent-of-code-2024/aoc"
 )
 
 /* input format
@@ -36,9 +38,9 @@ func newCalc(in string) (*calc, error) {
 	if len(vals) < 2 {
 		return nil, fmt.Errorf("malformed input: want <v>:<v>+, want >=2 vals got %d", len(vals))
 	}
-	c := &calc{total: mustParseInt(bits[0])}
+	c := &calc{total: aoc.MustParseInt(bits[0])}
 	for i, v := range vals {
-		c.vals = append(c.vals, mustParseInt(v))
+		c.vals = append(c.vals, aoc.MustParseInt(v))
 		if i > 0 {
 			c.ops = append(c.ops, unknown)
 		}
@@ -95,7 +97,7 @@ func main() {
 	if len(os.Args) < 2 {
 		log.Fatal("Usage: main <in file>")
 	}
-	lines, err := readLines(os.Args[1])
+	lines, err := aoc.ReadLines(os.Args[1])
 	if err != nil {
 		log.Fatalf("Error: %v", err)
 	}

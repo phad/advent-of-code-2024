@@ -7,6 +7,8 @@ import (
 	"math"
 	"strconv"
 	"strings"
+
+	"github.com/phad/advent-of-code-2024/aoc"
 )
 
 type opcode int
@@ -247,7 +249,7 @@ func parseInput(in []string) (*computer, error) {
 	if len(in) != 5 {
 		return nil, fmt.Errorf("input: got %d lines want 5", len(in))
 	}
-	f1 := func(s string) int { return int(mustParseInt(s[(strings.Index(s, ":") + 2):len(s)])) }
+	f1 := func(s string) int { return int(aoc.MustParseInt(s[(strings.Index(s, ":") + 2):len(s)])) }
 	a, b, c := f1(in[0]), f1(in[1]), f1(in[2])
 	if len(in[3]) != 0 {
 		return nil, fmt.Errorf("input: got non-empty line3 (%d chars) want 0", len(in[3]))
@@ -260,8 +262,8 @@ func parseInput(in []string) (*computer, error) {
 	var program []operation
 	for i := 0; i < len(bytes); i += 2 {
 		program = append(program, operation{
-			opcode:  opcode(int(mustParseInt(bytes[i]))),
-			operand: operand(int(mustParseInt(bytes[i+1]))),
+			opcode:  opcode(int(aoc.MustParseInt(bytes[i]))),
+			operand: operand(int(aoc.MustParseInt(bytes[i+1]))),
 		})
 	}
 	return initComputer(a, b, c, program), nil

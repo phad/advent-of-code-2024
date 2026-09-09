@@ -5,6 +5,8 @@ import (
 	"math"
 	"os"
 	"regexp"
+
+	"github.com/phad/advent-of-code-2024/aoc"
 )
 
 /* Example input
@@ -131,7 +133,7 @@ func mustExtractTwoInt(re *regexp.Regexp, in string) (int64, int64) {
 	matches := re.FindAllStringSubmatch(in, -1)
 	for _, m := range matches {
 		//log.Printf("match #%v: %v", i, m)
-		return mustParseInt(m[1]), mustParseInt(m[2])
+		return aoc.MustParseInt(m[1]), aoc.MustParseInt(m[2])
 	}
 	return 0, 0
 }
@@ -165,7 +167,7 @@ func main() {
 	if len(os.Args) < 2 {
 		log.Fatal("Usage: main <in file>")
 	}
-	lines, err := readLines(os.Args[1])
+	lines, err := aoc.ReadLines(os.Args[1])
 	if err != nil {
 		log.Fatalf("Error: %v", err)
 	}

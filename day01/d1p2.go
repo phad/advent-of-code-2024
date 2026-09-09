@@ -3,33 +3,16 @@ package main
 import (
 	"log"
 	"math"
-	"os"
 	"regexp"
 	"sort"
-	"strconv"
-	_ "strconv"
+
+	"github.com/phad/advent-of-code-2024/aoc"
 )
 
 var lineRE = regexp.MustCompile("([0-9]+)")
 
-func mustParseInt(s string) int64 {
-	v, err := strconv.ParseInt(s, 10, 64)
-	if err != nil {
-		log.Fatalf("ParseInt(%q) err=%v", s, err)
-	}
-	return v
-}
-
 func main() {
-	log.Println("AoC-2024-day01-part2")
-	if len(os.Args) < 2 {
-		log.Fatal("Usage: main <in file>")
-	}
-	lines, err := readLines(os.Args[1])
-	if err != nil {
-		log.Fatalf("Error: %v", err)
-	}
-	log.Printf("Read %d input lines", len(lines))
+	lines := aoc.MustReadInput("AoC-2024-day01-part2")
 
 	// Two slices of integers read from the input file.
 	var left, right []int64
@@ -42,9 +25,9 @@ func main() {
 			log.Fatalf("Error: input line %d %q did not contain two numbers.", idx, line)
 		}
 		// log.Printf("Input line %d contains %v", idx, matches)
-		l := mustParseInt(matches[0])
+		l := aoc.MustParseInt(matches[0])
 		left = append(left, l)
-		r := mustParseInt(matches[1])
+		r := aoc.MustParseInt(matches[1])
 		right = append(right, r)
 		rightCount[r]++
 	}

@@ -5,6 +5,8 @@ import (
 	"log"
 	"os"
 	"strings"
+
+	"github.com/phad/advent-of-code-2024/aoc"
 )
 
 /*
@@ -70,7 +72,7 @@ func main() {
 	if len(os.Args) < 2 {
 		log.Fatal("Usage: main <in file>")
 	}
-	lines, err := readLines(os.Args[1])
+	lines, err := aoc.ReadLines(os.Args[1])
 	if err != nil {
 		log.Fatalf("Error: %v", err)
 	}
@@ -82,8 +84,8 @@ func main() {
 		// Try parsing as an ordering rule first
 		bits := strings.Split(line, "|")
 		if len(bits) == 2 {
-			first := int(mustParseInt(bits[0]))
-			second := int(mustParseInt(bits[1]))
+			first := int(aoc.MustParseInt(bits[0]))
+			second := int(aoc.MustParseInt(bits[1]))
 			rs.addOrdering(first, second)
 			continue
 		}
@@ -91,7 +93,7 @@ func main() {
 		if len(bits) >= 2 {
 			var update []int
 			for _, bit := range bits {
-				update = append(update, int(mustParseInt(bit)))
+				update = append(update, int(aoc.MustParseInt(bit)))
 			}
 			log.Printf("Read update sequence: %v", update)
 			updates = append(updates, update)

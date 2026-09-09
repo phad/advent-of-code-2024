@@ -5,6 +5,8 @@ import (
 	"log"
 	"os"
 	"strings"
+
+	"github.com/phad/advent-of-code-2024/aoc"
 )
 
 type grid struct {
@@ -26,7 +28,7 @@ func newGrid(in []string) (*grid, error) {
 		}
 		var row []int
 		for j := 0; j < g.w; j++ {
-			row = append(row, int(mustParseInt(r[j:j+1])))
+			row = append(row, int(aoc.MustParseInt(r[j:j+1])))
 		}
 		g.cells = append(g.cells, row)
 	}
@@ -201,7 +203,7 @@ func main() {
 	if len(os.Args) < 2 {
 		log.Fatal("Usage: main <in file>")
 	}
-	lines, err := readLines(os.Args[1])
+	lines, err := aoc.ReadLines(os.Args[1])
 	if err != nil {
 		log.Fatalf("Error: %v", err)
 	}

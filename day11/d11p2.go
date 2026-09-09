@@ -5,6 +5,8 @@ import (
 	"log"
 	"os"
 	"strings"
+
+	"github.com/phad/advent-of-code-2024/aoc"
 )
 
 /* Example input
@@ -28,8 +30,8 @@ func apply(val int) []int {
 	// stones 10 and 0.)
 	s := fmt.Sprintf("%d", val)
 	if len(s)%2 == 0 {
-		next = append(next, int(mustParseInt(s[0:len(s)/2])))
-		next = append(next, int(mustParseInt(s[len(s)/2:len(s)])))
+		next = append(next, int(aoc.MustParseInt(s[0:len(s)/2])))
+		next = append(next, int(aoc.MustParseInt(s[len(s)/2:len(s)])))
 		return next
 	}
 	// Otherwise: the stone is replaced by a new stone; the
@@ -125,7 +127,7 @@ func main() {
 	if len(os.Args) < 2 {
 		log.Fatal("Usage: main <in file> [<iters>]")
 	}
-	lines, err := readLines(os.Args[1])
+	lines, err := aoc.ReadLines(os.Args[1])
 	if err != nil {
 		log.Fatalf("Error: %v", err)
 	}
@@ -135,14 +137,14 @@ func main() {
 
 	iters := 25
 	if len(os.Args) == 3 {
-		iters = int(mustParseInt(os.Args[2]))
+		iters = int(aoc.MustParseInt(os.Args[2]))
 	}
 
 	bits := strings.Split(lines[0], " ")
 
 	var seq []int
 	for _, n := range bits {
-		seq = append(seq, int(mustParseInt(n)))
+		seq = append(seq, int(aoc.MustParseInt(n)))
 	}
 
 	ps := newProductionSet(seq)
